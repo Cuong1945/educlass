@@ -133,6 +133,9 @@ To access the system, use the following credentials (created after running the s
 - **Role:** Administrator
 - **Username:** `admin`
 - **Password:** `Admin@123`
+- **Role:** Teacher(you can create a new accounts or use available account)
+- **Username:** `username at manage teacher page`
+- **Password:** `Teacher@123`
 
 ## ⚠️ Known Issues
 - Currently optimized for desktop view; mobile responsiveness is in progress.

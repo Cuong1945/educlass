@@ -19,6 +19,7 @@ export default function TakeAttendance() {
   const [errorMessage, setErrorMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [alreadyTaken, setAlreadyTaken] = useState(false)
+  const [historyError, setHistoryError] = useState('')
 
   const showSuccess = (msg) => {
     setSuccessMessage(msg)
@@ -45,7 +46,6 @@ export default function TakeAttendance() {
     try {
       const params = {}
       if (selectedClass) params.classId = selectedClass
-      
       const { data } = await axiosClient.get('/students/my-students', { params })
       setStudents(data)
       const init = {}
@@ -72,11 +72,19 @@ export default function TakeAttendance() {
   }, [selectedClass, selectedDate])
 
   const fetchHistory = useCallback(async () => {
-    if (!selectedClass) { setHistory([]); return }
+    if (!selectedClass) {
+      setHistory([])
+      setHistoryError('')
+      return
+    }
     try {
       const { data } = await axiosClient.get('/attendance/history', { params: { classId: selectedClass } })
       setHistory(data)
-    } catch { /* silent */ }
+      setHistoryError('')
+    } catch (err) {
+      setHistory([])
+      setHistoryError(err.response?.data?.message || 'Failed to load attendance history')
+    }
   }, [selectedClass])
 
   useEffect(() => {
@@ -85,6 +93,7 @@ export default function TakeAttendance() {
     setAlreadyTaken(false)
     setViewDate('')
     setHistoryRecords([])
+    setHistoryError('')
   }, [selectedClass])
 
   useEffect(() => {
@@ -104,13 +113,11 @@ export default function TakeAttendance() {
   }
 
   const handleSubmit = async () => {
-    // Validate all have status
     const missing = students.some((s) => !records[s._id])
     if (missing) {
       showError('All students must have attendance status')
       return
     }
-
     setSubmitting(true)
     try {
       const payload = {
@@ -137,10 +144,15 @@ export default function TakeAttendance() {
     try {
       const { data } = await axiosClient.get('/attendance', { params: { classId: selectedClass, date: dateStr } })
       setHistoryRecords(data)
-    } catch { /* silent */ }
+    } catch {
+      setHistoryRecords([])
+    }
   }
 
-  const formatDate = (d) => new Date(d).toLocaleDateString('en-GB')
+  // Deduplicate dates from history (normalize to YYYY-MM-DD, then unique + sorted desc)
+  const uniqueHistoryDates = [...new Set(
+    history.map(d => new Date(d).toISOString().split('T')[0])
+  )].sort((a, b) => new Date(b) - new Date(a))
 
   const presentCount = Object.values(records).filter((v) => v === 'PRESENT').length
   const absentCount = Object.values(records).filter((v) => v === 'ABSENT').length
@@ -300,23 +312,24 @@ export default function TakeAttendance() {
         )}
 
         {/* Attendance History */}
-        {selectedClass && history.length > 0 && (
+        {selectedClass && (
           <section className="panel card">
             <h3>Attendance History</h3>
+            {historyError && <div className="alert error">{historyError}</div>}
+            {uniqueHistoryDates.length === 0 && !historyError && (
+              <p style={{ color: '#999', fontSize: '14px' }}>No attendance sessions recorded yet.</p>
+            )}
             <div className="history-chips">
-              {history.map((d) => {
-                const ds = new Date(d).toISOString().split('T')[0]
-                return (
-                  <button
-                    key={ds}
-                    type="button"
-                    className={`history-chip${viewDate === ds ? ' active' : ''}`}
-                    onClick={() => viewHistoryDate(ds)}
-                  >
-                    {formatDate(d)}
-                  </button>
-                )
-              })}
+              {uniqueHistoryDates.map((ds) => (
+                <button
+                  key={ds}
+                  type="button"
+                  className={`history-chip${viewDate === ds ? ' active' : ''}`}
+                  onClick={() => viewHistoryDate(ds)}
+                >
+                  {new Date(ds).toLocaleDateString('en-GB')}
+                </button>
+              ))}
             </div>
 
             {viewDate && historyRecords.length > 0 && (

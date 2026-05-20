@@ -240,6 +240,7 @@ export default function UserManagement() {
                 <tr>
                   <th>No.</th>
                   <th>Username</th>
+                  <th>Full Name</th>
                   <th>Email</th>
                   <th>Role</th>
                   <th>Status</th>
@@ -249,13 +250,14 @@ export default function UserManagement() {
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="empty-row">No user data available.</td>
+                    <td colSpan="7" className="empty-row">No user data available.</td>
                   </tr>
                 ) : (
                   users.map((u, idx) => (
                     <tr key={u._id}>
                       <td>{idx + 1}</td>
                       <td>{u.username}</td>
+                      <td>{u.fullName || '—'}</td>
                       <td>{u.email}</td>
                       <td><span className="role-chip">{u.role}</span></td>
                       <td>

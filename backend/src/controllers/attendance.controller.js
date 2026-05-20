@@ -119,8 +119,11 @@ const getAttendanceHistory = async (req, res) => {
 
   try {
     const dates = await Attendance.distinct('date', { classId });
-    const sorted = dates.sort((a, b) => new Date(b) - new Date(a));
-    res.json(sorted);
+    // Normalize each date to YYYY-MM-DD and deduplicate
+    const uniqueDates = [...new Set(
+      dates.map(d => new Date(d).toISOString().split('T')[0])
+    )].sort((a, b) => new Date(b) - new Date(a));
+    res.json(uniqueDates);
   } catch {
     res.status(500).json({ message: 'Server error' });
   }
@@ -176,12 +179,13 @@ const getAttendanceReport = async (req, res) => {
       const rate = totalForSt === 0 ? 0 : Math.round((presentCount / totalForSt) * 100);
 
       return {
-        _id: st._id,
+        studentId: st._id,
         name: st.name,
+        phone: st.phone,
         totalSessions: totalForSt,
         present: presentCount,
         absent: absentCount,
-        rate
+        attendanceRate: rate
       };
     });
 
